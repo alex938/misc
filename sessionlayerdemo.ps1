@@ -1,5 +1,4 @@
 # OSI Layer 5 - Session Layer Demonstration Scripts
-# Run these demos to show students real session layer protocols in action
 
 Write-Host "=== OSI Layer 5: Session Layer Protocol Demonstrations ===" -ForegroundColor Cyan
 Write-Host "These demos show real session layer protocols managing connections between applications" -ForegroundColor Yellow
