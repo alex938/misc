@@ -1,0 +1,13 @@
+services:
+  network-header-builder:
+    image: alex938/osiexplain:latest
+    container_name: osiexplain
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    networks:
+      - web
+
+networks:
+  web:
+    driver: bridge
