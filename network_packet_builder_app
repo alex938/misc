@@ -1,0 +1,13 @@
+services:
+  network-header-builder:
+    image: alex938/my-network-builder:latest
+    container_name: network-header-builder
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    networks:
+      - web
+
+networks:
+  web:
+    driver: bridge
