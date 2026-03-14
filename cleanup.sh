@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # cleanup.sh — VM & Docker housekeeping
 # Usage: sudo ./cleanup.sh [--docker-images-all] [--dry-run]
+# curl -fsSL https://raw.githubusercontent.com/alex938/misc/refs/heads/main/cleanup.sh | sudo bash -s -- --docker-images-all
 
 # ── Flags ────────────────────────────────────────────────────────────────────
 DOCKER_IMAGES_ALL=false   # remove ALL unused images, not just dangling ones
