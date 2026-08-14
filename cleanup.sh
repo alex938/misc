@@ -4,12 +4,12 @@
 # https://github.com/alex938/misc
 #
 # Usage: sudo ./cleanup.sh [OPTIONS]
-#   curl -fsSL https://raw.githubusercontent.com/alex938/misc/main/cleanup.sh \
-#     | sudo bash -s -- --docker-images-all
+# curl -fsSL https://raw.githubusercontent.com/alex938/misc/main/cleanup.sh | sudo bash -s -- --docker-images-all --volumes --deep-caches
 #
 # Safe by default: this reclaims caches and rebuildable data. Anything that can
-# destroy data you cannot regenerate (named container volumes) is opt-in and
-# needs an explicit confirmation.
+# destroy data you cannot regenerate (named container volumes) is opt-in — but
+# once you have asked for it on the command line it runs without prompting, so
+# the same invocation behaves identically in a terminal and under cron.
 
 set -euo pipefail
 
@@ -28,7 +28,6 @@ DOCKER_IMAGES_ALL=false   # remove ALL unused images, not just dangling ones
 CONTAINER_VOLUMES=false   # remove unused *named* volumes — destroys data
 DEEP_CACHES=false         # also drop caches that are slow to refill
 DRY_RUN=false
-ASSUME_YES=false
 QUIET=false
 JSON=false
 JOURNAL_KEEP="14d"
@@ -73,7 +72,7 @@ Output:
   --quiet, -q            Only report failures
   --json                 Emit a machine-readable summary on stdout (implies -q)
   --log=FILE             Append a timestamped transcript to FILE
-  -y, --yes              Do not prompt for confirmation
+  -y, --yes              Accepted and ignored; nothing ever prompts
   -V, --version          Print version and exit
   -h, --help             Show this help and exit
 
@@ -109,7 +108,7 @@ while (( $# )); do
     --dry-run|-n)         DRY_RUN=true ;;
     -q|--quiet)           QUIET=true ;;
     --json)               JSON=true; QUIET=true ;;
-    -y|--yes)             ASSUME_YES=true ;;
+    -y|--yes)             ;;   # kept for compatibility: there is nothing to confirm
     --only=*)             parse_sections ONLY "${1#*=}" ;;
     --skip=*)             parse_sections SKIP "${1#*=}" ;;
     --if-used-above=*)    IF_USED_ABOVE="${1#*=}"; IF_USED_ABOVE="${IF_USED_ABOVE%\%}" ;;
@@ -313,14 +312,8 @@ if [[ $EUID -ne 0 ]]; then
   fi
 fi
 
-if $CONTAINER_VOLUMES && ! $DRY_RUN && ! $ASSUME_YES; then
-  if [[ -t 0 ]]; then
-    printf '%s' "${RED}--volumes deletes unused NAMED volumes (database data lives there). Continue? [y/N] ${RESET}"
-    read -r reply
-    [[ $reply =~ ^[Yy]$ ]] || die "aborted"
-  else
-    die "--volumes destroys named volume data and there is no terminal to confirm on; re-run with --yes if you mean it" 2
-  fi
+if $CONTAINER_VOLUMES && ! $DRY_RUN; then
+  info "--volumes: unused NAMED volumes will be deleted (database data lives there)."
 fi
 
 if [[ -n $LOG_FILE ]]; then
@@ -687,13 +680,24 @@ else
     out "${BOLD}  Done!${RESET}" "Done."
   fi
 
+  # df measures the whole filesystem, not just the paths we touched, so anything
+  # else writing during the run shows up here too and a mount can legitimately
+  # end up larger. Report that as growth; "-160MB freed" is not a thing.
   for entry in "${per_mount[@]}"; do
     mount=${entry%|*}; delta=${entry#*|}
-    out "  ${mount}: ${BOLD}$(hr_kb "$delta")${RESET} freed" "  ${mount}: $(hr_kb "$delta") freed"
+    if (( delta < 0 )); then
+      out "  ${mount}: ${BOLD}$(hr_kb $(( -delta )))${RESET} larger" "  ${mount}: $(hr_kb $(( -delta ))) larger"
+    else
+      out "  ${mount}: ${BOLD}$(hr_kb "$delta")${RESET} freed" "  ${mount}: $(hr_kb "$delta") freed"
+    fi
   done
 
   if (( total_freed > 0 )); then
     out "  ${GREEN}${BOLD}Total freed : $(hr_kb "$total_freed")${RESET}" "Total freed: $(hr_kb "$total_freed")"
+  elif (( total_freed < 0 )); then
+    out "  Total freed : none — disks grew $(hr_kb $(( -total_freed ))) during the run" \
+        "Total freed: none (grew $(hr_kb $(( -total_freed ))))"
+    out "                (other writes outweighed the cleanup)" "(other writes outweighed the cleanup)"
   else
     out "  Total freed : 0 (already clean)" "Total freed: 0"
   fi
