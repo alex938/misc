@@ -2,7 +2,7 @@
 # curl -sSL https://raw.githubusercontent.com/alex938/misc/refs/heads/main/backup_dev1.sh | bash | tee -a /var/log/backup.log
 
 SOURCE="/home/alex/"
-DESTINATION="/mnt/dev1backup/"
+DESTINATION="/mnt/share1/dev1backup/"
 
 # Run rsync to create a backup
 rsync -avh --delete "$SOURCE" "$DESTINATION"
