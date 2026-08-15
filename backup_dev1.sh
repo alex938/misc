@@ -1,4 +1,5 @@
 #!/bin/bash
+# curl -sSL https://raw.githubusercontent.com/alex938/misc/refs/heads/main/backup_dev1.sh | bash | tee -a /var/log/backup.log
 
 SOURCE="/home/alex/"
 DESTINATION="/mnt/dev1backup/"
